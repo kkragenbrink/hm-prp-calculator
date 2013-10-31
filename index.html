@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+<head>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/angular.js/1.1.5/angular.min.js"></script>
+    <script type="text/javascript">
+        document.createElement('field');
+        var app = angular.module('prp-calculator', []);
+
+        app.directive('hmBlur', function() {
+            return function( scope, elem, attrs ) {
+                elem.bind('blur', function(evt) {
+                    scope.$apply(attrs.hmBlur);
+                });
+            };
+        });
+
+        app.controller('prp-calculator-controller', ['$scope', function ($scope) {
+            $scope.prp = {scenes : [], players : [], storytellers : []};
+
+            var deExport;
+            $scope.$watch('expimp', function () {
+                if ($scope.expimp === true) {
+                    $scope.export = angular.toJson($scope.prp);
+
+                    deExport = $scope.$watch('export', function () {
+                        $scope.prp = angular.fromJson($scope.export);
+                        $scope.prp.scenes = $scope.prp.scenes || [];
+                        $scope.prp.players = $scope.prp.players || [];
+                        $scope.prp.storytellers = $scope.prp.storytellers || [];
+                    });
+                }
+                else {
+                    deExport && deExport();
+                }
+            });
+
+            $scope.add = function (type) {
+                var val = {id : $scope.prp[type].length};
+                switch (type) {
+                    case 'storytellers':
+                        val.oog = [];
+                        break;
+                    case 'scenes':
+                        val.storytellers = [];
+                        val.players = [];
+                        break;
+                }
+                $scope.prp[type].push(val);
+            };
+
+            $scope.toggleSelection = function (item, value) {
+                var idx = item.indexOf(value);
+
+                if (idx >= 0) {
+                    item.splice(idx, 1);
+                }
+                else {
+                    item.push(value);
+                }
+            };
+
+            $scope.rewardST = function (storyteller) {
+                var scenes = 0;
+                var oogscenes = 0;
+                var noobscenes = 0;
+                var total = 0;
+
+                for (var i in $scope.prp.scenes) {
+                    var scene = $scope.prp.scenes[i];
+                    var oog = 0;
+
+                    if (scene.storytellers.indexOf(storyteller.id) >= 0) {
+                        // Count the scene as run.
+                        scenes++;
+
+                        // Count the Out of Group folks.
+                        for (var i in storyteller.oog) {
+                            if (scene.players.indexOf(storyteller.oog[i]) >= 0) {
+                                oog++;
+                            }
+                        }
+
+                        // And apply the OoG Bonus if it's worthwhile.
+                        if (oog > (scene.players / 2)) {
+                            oogscenes++;
+                        }
+
+                        // Determine if we had a newbie.
+                        for (var i in $scope.prp.players) {
+                            var player = $scope.prp.players[i];
+                            if (player.newbie && scene.players.indexOf(player.id) >= 0) {
+                                noobscenes++;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (scenes > 0) {
+                    total += Math.min((0.5 * (scenes - 1)) + 1, 5);
+                    total += 0.1 * oogscenes;
+                    total += 0.25 * noobscenes;
+                    total += ($scope.prp.complete && $scope.prp.scenes.length >= 3) ? Math.min((scenes * 0.1), 1) : 0;
+                    total += (1 & $scope.prp.staffRequested) * 0.5;
+                    if ($scope.prp.players.length > 6) {
+                        total += 0.1 * Math.floor($scope.prp.players.length / 3);
+                    }
+                }
+
+                return total;
+            };
+
+            $scope.rewardPlayer = function (player) {
+                var scenes = 0;
+                var noobscenes = 0;
+                var total = 0;
+
+                for (var i in $scope.prp.scenes) {
+                    var scene = $scope.prp.scenes[i];
+
+                    if (scene.players.indexOf(player.id) >= 0) {
+                        // Count the scene as participated.
+                        scenes++;
+
+                        // Determine if we had a newbie.
+                        for (var i in $scope.prp.players) {
+                            var player = $scope.prp.players[i];
+                            if (player.newbie && scene.players.indexOf(player.id) >= 0) {
+                                noobscenes++;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (scenes > 0) {
+                    total += 0.3 * scenes;
+                    total += 0.1 * noobscenes;
+                    total += ($scope.prp.complete && $scope.prp.scenes.length >= 3) ? Math.min((scenes * 0.1), 1) : 0;
+
+                    if ($scope.prp.players.length > 6) {
+                        total += (0.1 * Math.floor($scope.prp.players.length / 3)) / 2;
+                    }
+                }
+
+                return total;
+            };
+        }]);
+    </script>
+    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.0.0-rc2/css/bootstrap.min.css"></link>
+    <style type="text/css">
+        * { box-sizing : border-box; }
+
+        article > header {
+            border-bottom : 1px solid #DDD;
+            margin : 10px auto;
+            width : 95%;
+        }
+
+        article > header span {
+            font-size : 150%;
+        }
+
+        article > header button {
+            float: right;
+        }
+
+        input[type="text"] {
+            height : 1.5em;
+        }
+
+        td {
+            vertical-align : top;
+        }
+
+        td input[type="text"] {
+            width : 100%;
+        }
+
+        th span {
+            font-weight : normal;
+        }
+
+        section {
+            background : #EEE;
+            border : 1px solid #DDD;
+            border-radius : 5px;
+            -moz-border-radius: 5px;
+            -webkit-border-radius: 5px;
+            margin : 10px auto;
+            padding : 0.5em 1em;
+            width : 95%;
+        }
+
+        section field {
+            display : inline-block;
+            vertical-align: top;
+        }
+
+        section header {
+            font-size : 120%;
+            font-weight : bold;
+            border-bottom : 1px solid #DDD;
+            margin-bottom : 10px;
+        }
+
+        section field label {
+            margin : 0 10px;
+        }
+
+        textarea {
+            display : block;
+            margin : 10px auto;
+            height : 100px;
+            width : 95%;
+        }
+    </style>
+</head>
+<body ng-app="prp-calculator">
+<article ng-controller="prp-calculator-controller">
+<header>
+    <span>Haunted Memories PrP Calculator</span>
+    <button class="expimp" ng-mousedown="expimp = !expimp">Export/Import</button>
+</header>
+<section ng-show="expimp == true">
+    <header>Export/Import</header>
+    <textarea ng-bind="export" ng-model="export" hm-blur="expimp = false"></textarea>
+</section>
+<section>
+    <header>PrP Details</header>
+    <div>
+        <field>
+            <label for="prp-title">Title</label>
+            <input type="text" id="prp-title" ng-model="prp.title" size="64" />
+        </field>
+        <field>
+            <label for="prp-jobid">Job #</label>
+            <input type="text" id="prp-jobid" ng-model="prp.jobid" />
+        </field>
+    </div>
+    <div>
+    <field>
+        <label for="prp-complete">Complete</label>
+        <input type="checkbox" id="prp-complete" ng-model="prp.complete" />
+    </field>
+    <field>
+        <label for="prp-staff-requested">Staff Requested</label>
+        <input type="checkbox" id="prp-staff-requested" ng-model="prp.staffRequested" />
+    </field>
+    </div>
+</section>
+<section ng-show="prp.title.length > 0">
+    <header>Players</header>
+    <table width="100%">
+        <thead>
+        <tr>
+            <th></th>
+            <th>Name</th>
+            <th>Newbie</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="(count, player) in prp.players">
+            <td ng-bind="count+1"></td>
+            <td><input type="text" ng-model="player.name" /></td>
+            <td><input type="checkbox" ng-model="player.newbie" /></td>
+        </tr>
+        </tbody>
+    </table>
+    <button ng-click="add('players')">Add a Player</button>
+</section>
+<section ng-show="prp.players.length > 0">
+    <header>Storytellers</header>
+    <table width="100%">
+        <thead>
+        <tr>
+            <th></th>
+            <th>Name</th>
+            <th>Out of Group Players</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="(count, storyteller) in prp.storytellers">
+            <td ng-bind="count+1"></td>
+            <td><input type="text" ng-model="storyteller.name" /></td>
+            <td>
+                <div ng-repeat="player in prp.players">
+                    <input type="checkbox" value="{{player.id}}" ng-checked="storyteller.oog.indexOf(player.id) >= 0" ng-click="toggleSelection(storyteller.oog, player.id)" />
+                    <span ng-bind="player.name"></span>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <button ng-click="add('storytellers')">Add a Storyteller</button>
+</section>
+<section ng-show="prp.storytellers.length > 0">
+    <header>Scenes</header>
+    <table width="100%">
+        <thead>
+        <tr>
+            <th></th>
+            <th width="100px">Title</th>
+            <th>URL <span>(optional)</span></th>
+            <th>Storytellers</th>
+            <th>Players</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="(count, scene) in prp.scenes">
+            <td ng-bind="count+1"></td>
+            <td><input type="text" ng-model="scene.title" /></td>
+            <td><input type="text" ng-model="scene.url" /></td>
+            <td>
+                <div ng-repeat="storyteller in prp.storytellers">
+                    <input type="checkbox" ng-checked="scene.storytellers.indexOf(storyteller.id) >= 0" ng-click="toggleSelection(scene.storytellers, storyteller.id)" />
+                    <span ng-bind="storyteller.name"></span>
+                </div>
+            </td>
+            <td>
+                <div ng-repeat="player in prp.players">
+                    <input type="checkbox" ng-checked="scene.players.indexOf(player.id) >= 0" ng-click="toggleSelection(scene.players, player.id)" />
+                    <span ng-bind="player.name"></span>
+                </div>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <button ng-click="add('scenes')">Add a Scene</button>
+</section>
+<section ng-show="prp.scenes.length > 0">
+    <header>Rewards</header>
+    <div>
+        <div ng-repeat="storyteller in prp.storytellers">+xp/give <span ng-bind="storyteller.name"></span>=<span ng-bind="rewardST(storyteller)"></span>/PrP Storyteller Reward: <span ng-bind="prp.title"></span></div>
+        <div ng-repeat="player in prp.players">+xp/give <span ng-bind="player.name"></span>=<span ng-bind="rewardPlayer(player)"></span>/PrP Participation Reward: <span ng-bind="prp.title"></span></div>
+    </div>
+</section>
+</article>
+</body>
+</html>
