@@ -107,7 +107,7 @@
                     }
                 }
 
-                return total;
+                return Math.round(total * 10)/10;
             };
 
             $scope.rewardPlayer = function (player) {
@@ -124,8 +124,8 @@
 
                         // Determine if we had a newbie.
                         for (var i in $scope.prp.players) {
-                            var player = $scope.prp.players[i];
-                            if (player.newbie && scene.players.indexOf(player.id) >= 0) {
+                            var plr = $scope.prp.players[i];
+                            if (plr.newbie && scene.players.indexOf(plr.id) >= 0) {
                                 noobscenes++;
                                 break;
                             }
@@ -143,7 +143,7 @@
                     }
                 }
 
-                return total;
+                return Math.round(total * 10)/10;
             };
         }]);
     </script>
